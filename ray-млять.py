@@ -22,11 +22,11 @@ DELTA_ANGLE = FOV / NUM_RAYS  # изменение угла между сосе�
 MAX_DEPTH = 800  # максимальная глубина проверки для луча
 SCALE = PROJECTION_PLANE_WIDTH // NUM_RAYS  # ширина полосы проекции для каждого луча
 
-# карта, определяющая стены ('#') и свободное просранство ('.')
+# карта, определяющая стены ('#'), свободное пространство ('.') и двери ('D')
 mini_map = [
     '########',
     '#......#',
-    '#......#',
+    '###D####',
     '#......#',
     '#......#',
     '#......#',
@@ -36,7 +36,12 @@ mini_map = [
 
 # цвета
 BLACK = (0, 0, 0)  # черный цвет
-GOLD = (255, 215, 0)  # золотой цвет потому что дорого-богато
+GOLD = (255, 215, 0)  # золотой цвет
+GREEN = (0, 255, 0)  # зеленый цвет
+
+# состояние двери
+door_active = True
+door_open_time = 0
 
 # создание окна игры
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -60,16 +65,25 @@ def ray_casting():
             map_x = int(target_x / TILE_SIZE)
             map_y = int(target_y / TILE_SIZE)
 
-            # если луч наткнулся на стену
-            if mini_map[map_y][map_x] == '#':
-                # корректируем глубину для устранения эффекта "рыбьего глаза"
-                depth *= math.cos(player_dir - start_angle) 
-                # рассчитываем высоту стены
-                wall_height = 21000 / (depth + 0.0001)
-                # рисуем прямоугольник, представляющий стену
-                pygame.draw.rect(screen, GOLD, (ray * SCALE, HEIGHT // 2 - wall_height // 2, SCALE, wall_height))
-                break  # прекращаем дальнейшую проверку, так как стена найдена
-        
+            # Проверка на выход за границы карты
+            if 0 <= map_x < MAP_WIDTH and 0 <= map_y < MAP_HEIGHT:
+                # если луч наткнулся на стену
+                if mini_map[map_y][map_x] == '#':
+                    # корректируем глубину для устранения эффекта "рыбьего глаза"
+                    depth *= math.cos(player_dir - start_angle) 
+                    # рассчитываем высоту стены
+                    wall_height = 21000 / (depth + 0.0001)
+                    # рисуем прямоугольник, представляющий стену
+                    pygame.draw.rect(screen, GOLD, (ray * SCALE, HEIGHT // 2 - wall_height // 2, SCALE, wall_height))
+                    break  # прекращаем дальнейшую проверку, так как стена найдена
+                elif mini_map[map_y][map_x] == 'D':
+                    # Если дверь, проверяем, активна ли она
+                    if door_active:
+                        depth *= math.cos(player_dir - start_angle)
+                        wall_height = 21000 / (depth + 0.0001)
+                        pygame.draw.rect(screen, GREEN, (ray * SCALE, HEIGHT // 2 - wall_height // 2, SCALE, wall_height))
+                        break
+
         # Переходим к следующему углу для следующего луча
         start_angle += DELTA_ANGLE
 
@@ -80,7 +94,7 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-    
+
     # очищаем экран от грязи всякой и заполняем черным
     screen.fill(BLACK)
 
@@ -91,13 +105,36 @@ while True:
     if keys[pygame.K_RIGHT]:
         player_dir += 0.04  # поворот вправо
     if keys[pygame.K_UP]:
-        # двигалка вперде
-        player_x += 5 * math.cos(player_dir)
-        player_y += 5 * math.sin(player_dir)
+        # расчет новой позиции
+        new_x = player_x + 5 * math.cos(player_dir)
+        new_y = player_y + 5 * math.sin(player_dir)
+        # переводим новые координаты в индексы карты
+        map_x = int(new_x / TILE_SIZE)
+        map_y = int(new_y / TILE_SIZE)
+        # проверяем, можно ли двигаться
+        if mini_map[map_y][map_x] != '#' or (mini_map[map_y][map_x] == 'D' and not door_active):
+            player_x = new_x
+            player_y = new_y
     if keys[pygame.K_DOWN]:
-        # двигалка назад
-        player_x -= 5 * math.cos(player_dir)
-        player_y -= 5 * math.sin(player_dir)
+        # расчет новой позиции
+        new_x = player_x - 5 * math.cos(player_dir)
+        new_y = player_y - 5 * math.sin(player_dir)
+        # переводим новые координаты в индексы карты
+        map_x = int(new_x / TILE_SIZE)
+        map_y = int(new_y / TILE_SIZE)
+        # проверяем, можно ли двигаться
+        if mini_map[map_y][map_x] != '#' or (mini_map[map_y][map_x] == 'D' and not door_active):
+            player_x = new_x
+            player_y = new_y
+
+    # Проверка нажатия пробела для открытия двери
+    if keys[pygame.K_SPACE] and door_active:
+        door_active = False
+        door_open_time = pygame.time.get_ticks()  # Запоминаем время открытия двери
+
+    # Проверяем, истекло ли 5 секунд с момента открытия двери
+    if not door_active and pygame.time.get_ticks() - door_open_time > 5000:
+        door_active = True  # Дверь снова активна
 
     # рендеринг мира с помощью алгоритма трассировки лучей
     ray_casting()
