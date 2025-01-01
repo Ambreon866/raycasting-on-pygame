@@ -44,7 +44,7 @@ door_open_time = 0
 
 # создание окна игры
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("2.5D Raycasting Demo")  # Заголовок окна
+pygame.display.set_caption("Raycasting PyEngine")  # Заголовок окна
 
 # основной игровой цикл
 clock = pygame.time.Clock()  # Часы для контроля времени
