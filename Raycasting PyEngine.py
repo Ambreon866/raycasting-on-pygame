@@ -93,19 +93,9 @@ def ray_casting():
         # Переходим к следующему углу для следующего луча
         start_angle += DELTA_ANGLE
 
-# Главный цикл игры
-while True:
-    # Обрабатываем события
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-
-    # очищаем экран и заливаем его цветом фона
-    screen.fill(BACKGROUND_COLOR)
-
-    # получаем нажатия клавиш для управления игроком
-    keys = pygame.key.get_pressed()
+def handle_player_movement(keys):
+    # функция для управления движением игрока
+    global player_x, player_y, player_dir, door_active, door_open_time
     if keys[pygame.K_LEFT]:
         player_dir -= 0.04  # поворот влево
     if keys[pygame.K_RIGHT]:
@@ -138,9 +128,29 @@ while True:
         door_active = False
         door_open_time = pygame.time.get_ticks()  # Запоминаем время открытия двери
 
-    # Проверяем, истекло ли 5 секунд с момента открытия двери
+def check_door_status():
+    # функция для проверки состояния двери
+    global door_active, door_open_time
     if not door_active and pygame.time.get_ticks() - door_open_time > 5000:
         door_active = True  # Дверь снова активна
+
+# Главный цикл игры
+while True:
+    # Обрабатываем события
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    # очищаем экран и заливаем его цветом фона
+    screen.fill(BACKGROUND_COLOR)
+
+    # получаем нажатия клавиш для управления игроком
+    keys = pygame.key.get_pressed()
+    handle_player_movement(keys)
+
+    # проверка состояния двери
+    check_door_status()
 
     # рендеринг мира с помощью алгоритма трассировки лучей
     ray_casting()
